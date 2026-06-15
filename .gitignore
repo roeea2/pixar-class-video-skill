@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# Working media — never commit real children's photos/videos.
+# (README media lives under assets/images/ and is force-added.)
+video_assets/
+*.mp4
+*.mov
+*.jpg
+*.jpeg
+*.png
+!assets/images/*.gif
+!assets/images/still_*.jpg
