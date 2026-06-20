@@ -100,6 +100,9 @@ scripts/
 ## 🔑 The hard-won lessons (so your film comes out great)
 
 - **Likeness first** — state the real age, face shape, exact hair/eye color; demand *"only mild stylization."* Approve each sheet before building scenes.
+- **Let the reference define the look** — once a sheet is locked, pass it to every scene and describe only the *action*; restating hair/clothes/age in the prompt silently produces a different-looking person.
+- **One approval gate per artifact** — look → each scene → animation → voice → lip-sync → assembly. An OK on a cheap still saves re-rolling every expensive clip after it.
+- **Ask for keys up front** — if voiceover needs an ElevenLabs key, request it before starting; keep it out of the repo and rotate it after.
 - **One child per solo scene** — or the model duplicates them.
 - **Verify every render** — a deep `xfade` chain can silently truncate the tail (rc=0!). Always compare the **video** stream duration to the **audio** stream duration.
 - **Crowds** — drop the word *"diverse"*; state the class's real look, or you get random mismatched fillers.

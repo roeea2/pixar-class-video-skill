@@ -3,7 +3,7 @@ name: pixar-class-video
 description: "Interactive director for building a beautiful Pixar-style end-of-year class video (Hebrew or any language). Use this skill when the user wants to create a class movie, end-of-year video, 'סרט סוף שנה', turn kids' photos into Pixar characters, animate hobby scenes, add RTL/Hebrew title cards, assemble clips with music, or build a teaser/promo. Walks the user STEP BY STEP, asking what to do at each phase, and uses the Higgsfield MCP for images/video + ffmpeg for assembly."
 argument-hint: "[start|kid|cards|assemble|teaser] <optional note>"
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   author: RoeeAI
   requires: "Higgsfield MCP, ffmpeg, ffprobe, python3 (PIL)"
 ---
@@ -35,14 +35,30 @@ Do not skip these even for a "quick" request. They encode hard-won fixes.
 ## The golden rules (do not violate)
 
 - **Likeness first.** The user cares most that each character looks like the real
-  child. After every character sheet, show it and ask "close enough?" before
-  building that kid's scenes. Re-roll on request.
+  child (or, for a personal reel, themselves). After every character sheet, show it
+  and ask "close enough?" before building that person's scenes. Re-roll on request.
+- **Let the reference define appearance — never override it in the prompt.** Once a
+  canonical character sheet/reference exists, pass it to every downstream scene and
+  describe only the *action and setting*. Do NOT restate hair, clothes, glasses, age,
+  or face in words that differ from the reference (e.g. don't write "navy blazer,
+  short dark hair" when the reference is an orange polo and a buzz-cut) — the model
+  obeys the words and silently produces a different-looking person. If the user wants
+  to *change* the look, change the reference first, lock it, then generate scenes.
 - **One child per solo scene.** Always add "Exactly ONE child alone, no other
   people" or the model duplicates them.
 - **Always verify the render.** After every assembly, compare the VIDEO stream
   duration to the AUDIO stream duration (`ffprobe -select_streams v:0`). A long
   xfade chain can silently truncate the tail with rc=0. See assembly doc.
-- **Ask, show, confirm.** Each phase ends with a preview and a question.
+- **Ask, show, confirm — one approval gate per artifact.** Never batch a whole reel.
+  Render → show the user the actual result → wait for an explicit OK → only then spend
+  on the next step. The gate order for a character reel is: (1) **character look**
+  (lock the likeness), (2) **each scene still**, (3) **animation**, (4) **voice sample**,
+  (5) **lip-sync**, (6) **final assembly**. Getting an OK on a cheap still saves
+  re-rolling every expensive clip after it.
+- **Ask for credentials up front.** If a step needs a key (ElevenLabs, etc.), say so
+  and request it before starting — don't silently fall back to a lesser path or stall.
+  A pasted key is exposed: store it only in an env var / a `/tmp` file (chmod 600),
+  never in the repo, and tell the user to rotate it afterward.
 - **Verify TTS language.** If you add voiceover, never trust that the model spoke
   the right language — transcribe a sample with `openai-whisper` and check the
   detected language (e.g. ElevenLabs `multilingual_v2` silently speaks Persian for
@@ -184,6 +200,9 @@ and whether to include real photos.
 - **Person duplicated** → "Exactly ONE child alone, no other people."
 - **Character rendered fat / with braces / wrong eye color** → drop the
   over-strong ref, add the corrective adjective ("slim", "no braces", "blue eyes").
+- **Scenes look like a different person than the approved sheet** → your prompt
+  described appearance (hair/clothes/age) in words that override the reference. Pass
+  the locked reference and describe only the action; remove conflicting descriptors.
 - **Too dark from golden-hour light** → "bright even midday daylight."
 - **Tail of the movie missing though rc=0** → xfade chain truncation; use more
   chunks and re-verify video==audio.
