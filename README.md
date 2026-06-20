@@ -34,6 +34,10 @@ It encodes everything learned from building a real class movie: how to make char
 **actually look like the kids**, the prompt traps to avoid, RTL Hebrew title cards, a
 soundtrack that never drags, and an assembly method that won't silently drop your ending.
 
+Optional extras you can switch on: **voiceover** (text-to-speech, or the user's own
+**cloned voice**), **lip-sync** so an on-camera character mouths the words, and
+**per-scene subtitles / text-over** — all RTL-aware.
+
 <div align="center">
 <img src="assets/images/still_class.jpg" width="32%" alt="Whole-class finale" />
 <img src="assets/images/still_concert.jpg" width="32%" alt="Teacher concert scene" />
@@ -47,10 +51,10 @@ soundtrack that never drags, and an assembly method that won't silently drop you
 | **0. Setup & scope** | Check tools, create the workspace, ask language / length / music / scenes-per-kid. |
 | **1. Roster** | You provide each child's name, face photo, and 1–3 hobbies. |
 | **2. Per-child** | Crop → **character sheet** → *"does this look like them?"* → hobby scenes → animate. |
-| **3. Cards** | Hebrew/RTL title + caption cards (handles the digit/`?` glyph traps). |
+| **3. Cards & subtitles** | Hebrew/RTL title cards + optional per-scene text-over (digit/`?` glyph traps handled). |
 | **4. Groups & real photos** | Whole-class finale, event recreations, real-photo interludes. |
-| **5. Music** | Pick royalty-free tracks (credited on the end card). |
-| **6. Assemble & verify** | Chunked render, then **verify video length == audio length**. |
+| **5. Audio** | Music (always) + **optional voiceover** (TTS / cloned voice) + **optional lip-sync**. |
+| **6. Assemble & verify** | Chunked or narrated render, then **verify video length == audio length**. |
 | **7. Teaser** | Optional 15–20s promo for parents (0 generation credits). |
 
 ## 🚀 Install (as a Claude Code skill)
@@ -81,10 +85,15 @@ references/
   higgsfield-pipeline.md     exact MCP tools / models / params / polling
   hebrew-titles.md           RTL cards with PIL (the digit & "?" traps)
   assembly-and-music.md      chunked ffmpeg assembler + music rotation + the truncation bug
+  subtitles-and-captions.md  per-scene subtitles / text-over (lower-third, RTL)
+  voiceover-and-lipsync.md   optional TTS / voice cloning / wan2_7 lip-sync + audio mixing
 scripts/
   make_title_card.py         Hebrew/RTL title, caption & blank cards
+  make_caption.py            per-scene subtitle / text-over overlay (RTL, auto-fit)
   make_real_clip.py          real photo -> Ken-Burns clip
-  assemble.py                build the movie (chunked) — then VERIFY
+  make_voiceover.py          per-scene voiceover (say / ElevenLabs clone) + --verify
+  assemble.py                build the movie (chunked, music-only) — then VERIFY
+  assemble_narrated.py       build with voiceover + burned subtitles + music bed
   make_teaser.py             build the promo teaser (pure ffmpeg)
 ```
 

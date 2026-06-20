@@ -27,6 +27,8 @@ Before constructing any image/video prompt, read:
 3. `references/higgsfield-pipeline.md` — exact MCP tools, models, params, polling
 4. `references/hebrew-titles.md` — RTL title cards with PIL (the `?`/tofu gotcha)
 5. `references/assembly-and-music.md` — the 2-chunk ffmpeg assembler + music rotation + the silent-truncation bug
+6. `references/subtitles-and-captions.md` — per-scene subtitles / text-over (when laying captions over scenes)
+7. `references/voiceover-and-lipsync.md` — optional spoken narration, voice cloning, and lip-sync (when adding audio/voiceover)
 
 Do not skip these even for a "quick" request. They encode hard-won fixes.
 
@@ -41,9 +43,15 @@ Do not skip these even for a "quick" request. They encode hard-won fixes.
   duration to the AUDIO stream duration (`ffprobe -select_streams v:0`). A long
   xfade chain can silently truncate the tail with rc=0. See assembly doc.
 - **Ask, show, confirm.** Each phase ends with a preview and a question.
-- **Privacy.** These are real minors. Never upload the kids' photos anywhere
-  except the generation API the user already chose. If publishing/teaser-sharing,
-  warn before putting real faces on any public surface.
+- **Verify TTS language.** If you add voiceover, never trust that the model spoke
+  the right language — transcribe a sample with `openai-whisper` and check the
+  detected language (e.g. ElevenLabs `multilingual_v2` silently speaks Persian for
+  Hebrew text; only `eleven_v3` does Hebrew). See voiceover-and-lipsync.md.
+- **Privacy.** These are real minors (and any cloned voice is real PII). Never
+  upload photos/voice anywhere except the generation/TTS service the user chose.
+  Keep API keys in env vars only — never write them to a file or commit them. If
+  publishing/teaser-sharing, warn before putting real faces/voices on any public
+  surface.
 
 ## Quick command map
 
@@ -52,6 +60,8 @@ Do not skip these even for a "quick" request. They encode hard-won fixes.
 | `/pixar-class-video` or `start` | Run the full wizard from Phase 0 |
 | `kid <name>` | Add/redo a single child (sheet → verify → scenes → animate) |
 | `cards` | (Re)generate Hebrew/RTL title + caption cards |
+| `subtitles` | Add per-scene subtitles / text-over a scene (`make_caption.py`) |
+| `voiceover` | Add optional narration — TTS, the user's cloned voice, and/or lip-sync |
 | `assemble` | Rebuild the movie and verify video==audio |
 | `teaser` | Build/refresh the parents' teaser |
 
@@ -68,7 +78,10 @@ Do not skip these even for a "quick" request. They encode hard-won fixes.
    - Target length / how many kids.
    - Music vibe (and confirm any "must-open-with" track).
    - How many hobby scenes per child (1–3).
-   - Output filename.
+   - **Voiceover?** none (music + cards only) / TTS narration / the user's own
+     **cloned** voice — and whether on-camera characters should be **lip-synced**.
+   - **Subtitles / text-over** the scenes, or title cards only?
+   - Aspect ratio (16:9 / 9:16 / 1:1) and output filename.
 4. Restate the plan in one paragraph and get a go-ahead.
 
 ## Phase 1 — Collect the roster (ASK)
@@ -97,12 +110,16 @@ For each child, in order, do this and **stop to show the character sheet**:
 > Re-doing one kid later? Use `kid <name>` — only that child's sheet+scenes are
 > regenerated and swapped into the assembly list; nothing else changes.
 
-## Phase 3 — Title & caption cards (Hebrew/RTL)
+## Phase 3 — Title cards & subtitles (Hebrew/RTL)
 
-Use `scripts/make_title_card.py` (see `references/hebrew-titles.md`). Generate a
-name title card per child and a caption card per scene. Mind the RTL reversal and
-the missing-`?` glyph (use `!`). Use a fully transparent `blank.png` for segments
-that need no caption.
+- **Full-frame cards:** `scripts/make_title_card.py` (see `references/hebrew-titles.md`)
+  for the name/title cards and any caption cards. Mind the RTL reversal and the
+  missing-`?` glyph (use `!`). Use a transparent `blank.png` for segments needing
+  no caption.
+- **Per-scene subtitles / text-over** (a caption laid over a scene while it plays):
+  `scripts/make_caption.py` (see `references/subtitles-and-captions.md`) — a
+  lower-third translucent panel, RTL-aware, auto-fits the width, vertical or
+  landscape. If a scene has voiceover, its subtitle should be that spoken line.
 
 ## Phase 4 — Group scenes, events & real-photo interludes (ASK)
 
@@ -114,15 +131,31 @@ that need no caption.
   real photos to use; warn that real faces will appear.
 - Decide the ending: many users end on real class photos, then a closing card.
 
-## Phase 5 — Music (ASK)
+## Phase 5 — Audio: music, voiceover & lip-sync (ASK)
 
-Confirm tracks (royalty-free, e.g. Kevin MacLeod CC-BY — credit on the end card).
-The assembler rotates tracks every ~55s so it never drags; it can open with a
-required favorite. See `references/assembly-and-music.md`.
+- **Music** (always): confirm royalty-free tracks (e.g. Kevin MacLeod CC-BY —
+  credit on the end card). The music-only `assemble.py` rotates tracks every ~55s
+  so it never drags; it can open with a required favorite. See
+  `references/assembly-and-music.md`.
+- **Voiceover** (optional — only if the user wants it): generate one line per scene
+  with `scripts/make_voiceover.py`. Backends: macOS `say` (free), ElevenLabs
+  (`eleven_v3` is the ONLY model that speaks Hebrew — clone the user's voice with
+  `--clone sample.mp3`, paid plan), or Higgsfield Inworld (`Oren`/`Yael` Hebrew
+  voices, no key, via the generate_audio tool). **Verify the language with
+  `--verify` (whisper).** See `references/voiceover-and-lipsync.md`.
+- **Lip-sync** (optional): only `wan2_7` accepts an audio input — feed it the
+  scene image + the VO line so the character mouths the words. Kling cannot do
+  this. Extract the synced audio back out and use it as that scene's VO so the mix
+  lines up with the lips.
+- **Mixing:** when there's voiceover/subtitles, assemble with
+  `scripts/assemble_narrated.py` (per-scene VO placed at scene offsets + a ducked
+  music bed + burned subtitles). Without voiceover, use the music-only
+  `assemble.py`.
 
 ## Phase 6 — Assemble & VERIFY
 
-Run `scripts/assemble.py` (2-chunk method). Then **always**:
+Run `scripts/assemble.py` (music-only, 2-chunk) **or** `scripts/assemble_narrated.py`
+(voiceover/subtitles). Then **always**:
 
 ```
 ffprobe -v error -select_streams v:0 -show_entries stream=duration,nb_frames -of default=nk=1:nw=1 OUT.mp4
@@ -154,5 +187,12 @@ and whether to include real photos.
 - **Too dark from golden-hour light** → "bright even midday daylight."
 - **Tail of the movie missing though rc=0** → xfade chain truncation; use more
   chunks and re-verify video==audio.
+- **Voiceover sounds like the wrong language** → the TTS model doesn't support it
+  (ElevenLabs `multilingual_v2`/`turbo`/`flash` can't do Hebrew). Use `eleven_v3`;
+  always confirm with `make_voiceover.py --verify` (whisper).
+- **Lip-synced mouth keeps moving after the line** → re-run that `wan2_7` clip with
+  "…then closes the mouth and holds a calm closed-mouth smile"; check a back-half frame.
+- **Lips don't match the voice** → use the audio EXTRACTED from the wan2_7 clip as
+  that scene's VO (don't overlay a separately-timed copy).
 
 Keep the user in the loop, keep characters faithful, and verify every render.
